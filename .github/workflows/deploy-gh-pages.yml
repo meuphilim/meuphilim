@@ -1,0 +1,68 @@
+
+name: Deploy Next.js to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Ou sua branch principal
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Necessário para fazer checkout do repositório
+      pages: write # Necessário para fazer deploy para o GitHub Pages
+      id-token: write # Necessário para autenticar com o GitHub Pages
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Certifique-se de que corresponde à sua versão de desenvolvimento
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci # 'ci' é geralmente preferido em CI para installs mais limpos e rápidos
+
+      # Nota sobre basePath e assetPrefix:
+      # Se o seu site GitHub Pages for servido de um subdiretório 
+      # (ex: https://<username>.github.io/<nome-do-repositorio>/),
+      # você precisará configurar 'basePath' e 'assetPrefix' no seu next.config.ts.
+      # Exemplo para um repositório chamado 'meu-app-legal':
+      # next.config.ts:
+      # module.exports = {
+      #   output: 'export',
+      #   basePath: '/meu-app-legal',
+      #   assetPrefix: '/meu-app-legal/',
+      #   // ... outras configurações
+      # };
+      # Você também pode precisar prefixar links e fontes de imagem com o basePath.
+      # Para imagens com next/image, o assetPrefix deve cuidar disso.
+
+      - name: Build Next.js app
+        run: npm run build # O script 'build' no package.json agora inclui 'next export'
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+        # Esta ação configura o ambiente para o deploy no GitHub Pages.
+        # Se você estiver usando um domínio personalizado, configure-o nas configurações do seu repositório.
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # O diretório de saída padrão para 'next export' é 'out'
+          path: ./out
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        # Esta ação faz o deploy do artefato carregado para o GitHub Pages.
+        # Não são necessárias configurações adicionais aqui se as permissões estiverem corretas.
